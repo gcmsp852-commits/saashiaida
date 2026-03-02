@@ -1,9 +1,9 @@
 /* zxing_worker.js (classic Worker)
  *
  * 同一ディレクトリに以下がある前提：
- *  - index.js
- *  - zxing_reader.wasm
- *  - zxing_worker.js（このファイル）
+ * - index.js
+ * - zxing_reader.wasm
+ * - zxing_worker.js（このファイル）
  *
  * index.js は zxing-wasm（IIFE reader）で、読み込み後 `ZXingWASM` を提供する想定。
  */
@@ -51,10 +51,19 @@ self.onmessage = async (ev) => {
     const t1 = performance.now();
     const found = Array.isArray(results) && results.length > 0;
 
-const packed = (results || []).map(r => ({
-  ...r, // ★extra / extras / management16 など「返ってきたもの」を落とさない
-  bytes: r.bytes ? Array.from(r.bytes) : null, // ★転送のため配列化だけ上書き
-}));
+    // ★修正箇所：WASMのGetterプロパティが欠落しないよう、明示的に書き出してコピーする
+    const packed = (results || []).map(r => ({
+      ...r, // 列挙可能なプロパティはそのまま
+      text: r.text,
+      format: r.format,
+      position: r.position,
+      // 独自WASMの出力に対応するため、考えられるプロパティを明示的に指定
+      management16: r.management16, 
+      extra: r.extra,
+      extras: r.extras,
+      metadata: r.metadata,
+      bytes: r.bytes ? Array.from(r.bytes) : null, // ArrayBufferはそのまま送れないので配列化
+    }));
 
     self.postMessage({
       type: 'resp',
